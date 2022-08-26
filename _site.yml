@@ -1,0 +1,14 @@
+name: "mJAM info"
+output_dir: "."
+navbar:
+  title: "Home"
+  right:
+    - text: "Examples"
+      href: examples.html
+    - icon: fa-envelope fa-lg
+      href: mailto:<shenjiay@usc.edu>
+    - icon: fa-github fa-lg
+      href: https://github.com/USCbiostats/hJAM/
+output:
+  prettydoc::html_pretty:
+    theme: leonids

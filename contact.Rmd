@@ -1,12 +1,15 @@
 ---
-title: "Contact"
+title: "Contact Us"
 ---
+```{r, echo = FALSE }
+library(fontawesome)
+```
 
-### Email 
+### `r fa("envelope")` Email 
 David V. Conti: shenjiay at usc.edu  
 Jiayi Shen: dconti at med.usc.edu
 
 
-### About us
+### `r fa("circle-info")` About us
 More on the Conti lab: https://contilab.usc.edu 
  

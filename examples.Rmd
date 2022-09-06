@@ -1,6 +1,250 @@
 ---
-title: "Toy Examples of running mJAM"
+title: "Toy examples of fitting mJAM"
+output:
+  html_document:
+    toc: true
+    toc_float: true
 ---
 
-### Stay tuned! 
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r pkg-dependencies, include=FALSE}
+if(!"susieR" %in% installed.packages()){install.packages("susieR")}
+if(!"BayesFactor" %in% installed.packages()){install.packages("BayesFactor")}
+if(!"Rmpfr" %in% installed.packages()){install.packages("Rmpfr")}
+if(!"tidyverse" %in% installed.packages()){install.packages("tidyverse")}
+if(!"matrixcalc" %in% installed.packages()){install.packages("matrixcalc")}
+```
+
+
+## Installation 
+```{r eval=FALSE}
+devtools::install_github("USCbiostats/hJAM")
+```
+
+
+## Special notes for macOS users
+For macOS users with apple silicon (M1 Macs), please install R version 4.2-arm64 from https://mac.r-project.org/ . This is a specific build for compatibility with the M1 arm-based Macs. One of crucial dependencies in `mJAM`, `Rmpfr`, is not yet compatible with Intel-based R versions running on M1 Macs and it will cause R/Rstudio to abort. But using version 4.2-arm64 will solve this issue. 
+
+```{r load-pkg}
+# source("./Scripts/mJAM_SuSiE_Forward.R")
+# source("./Scripts/mJAM_build_CS_v2_med_yty_test.R")
+# source("./Scripts/mJAM_logcondp_v3.R")
+# source("./Scripts/mJAM_LDpruning.R")
+# source("./Scripts/mJAM_Forward.R")
+library(hJAM)
+library(dplyr) ## for the use of piping operator %>% 
+```
+
+## Example 1: Complete SNP information {.tabset}
+
+
+In the first example, we'll illustrate the usage of `mJAM-SuSiE` and `mJAM-Forward` with a simulated dataset, consisting of 3 ancestry groups and 50 SNPs. The first SNP, named "rs1", is the only true causal SNP.  
+ 
+First, let's load the marginal summary statistics of these 50 SNPs. 
+
+```{r}
+# Load marginal betas data 
+MargBeta <- read.table("./Example-Data/Marg_1.txt")
+names(MargBeta) <- c("SNP", "MargBeta_P1", "MargSEBeta_P1", 
+                      "MargBeta_P2", "MargSEBeta_P2",
+                      "MargBeta_P3", "MargSEBeta_P3")
+head(MargBeta)
+```
+
+Then load the effect allele frequencies (not necessarily the minor alleles). 
+```{r}
+# Load effective allele frequency data
+EAF <- read.table("./Example-Data/EAF_1.txt")
+names(EAF) <- c("SNP", "EAF_P1", "EAF_P2", "EAF_P3")
+head(EAF)
+```
+
+Finally one reference dosage matrix for each ancestry group. 
+```{r}
+# Load individual-level SNP data from reference panel
+RefDosage_P1 <- read.table("./Example-Data/Dosage_S1_1.txt", header = TRUE)
+RefDosage_P2 <- read.table("./Example-Data/Dosage_S2_1.txt", header = TRUE)
+RefDosage_P3 <- read.table("./Example-Data/Dosage_S3_1.txt", header = TRUE)
+RefDosage_P1[1:5, 1:5]
+RefDosage_P2[1:5, 1:5]
+RefDosage_P3[1:5, 1:5]
+```
+
+Now we'll use the marginal summary statistics (`beta`, `se`, `EAF` and `reference dosage`) to run `mJAM-SuSiE` and `mJAM-SuSiE`. 
+
+
+### mJAM-SuSiE
+
+```{r}
+# --- Fit mJAM_SuSiE
+Ex1_SuSiE_fit <- mJAM_SuSiE(marginal.betas = list(MargBeta$MargBeta_P1, MargBeta$MargBeta_P2, MargBeta$MargBeta_P3), 
+                      marginal.se = list(MargBeta$MargSEBeta_P1, MargBeta$MargSEBeta_P2, MargBeta$MargSEBeta_P3), 
+                      EAFs = list(EAF$EAF_P1, EAF$EAF_P2, EAF$EAF_P3), 
+                      N_GWAS = c(5000, 5000, 5000),
+                      X_ref = list(RefDosage_P1,RefDosage_P2,RefDosage_P3),
+                      logORToBeta = FALSE,
+                      SNP_names = MargBeta$SNP,
+                      SuSiE_num_comp = 10, 
+                      SuSiE_coverage = 0.95)
+## --- mJAM_SuSiE results
+mJAM_SuSiE_get_cs(susie_fit = Ex1_SuSiE_fit$fit, SNP_names = MargBeta$SNP)
+```
+
+`mJAM_SuSiE` outputs a table with 5 columns: `index`, `coverage`, `CS_size`,`index_SNP` and `CS_SNP`. 
+
+- `index` is a label for a distinct credible set. 
+- `coverage` is the empirical coverage of this credible set. 
+- `CS_size` shows how many SNPs in total are there in this credible set. 
+- `index_SNP` is the name of the index SNP (SNP with highest posterior probability) in this credible set.
+- `CS_SNP` is names of individual SNPs selected in this credible set.
+
+
+### mJAM-Forward
+```{r}
+# --- Fit mJAM_Forward 
+Ex1_Forward_fit <- mJAM_Forward(N_GWAS = c(5000, 5000, 5000), 
+                                X_ref = list(RefDosage_P1,RefDosage_P2,RefDosage_P3), 
+                                Marg_Result = MargBeta,
+                                EAF_Result = EAF, 
+                                condp_cut = 0.05/50, # Bonferroni-corrected p-val
+                                within_pop_threshold = 0.50, 
+                                across_pop_threshold = 0.20,
+                                coverage = 0.95,
+                                filter_rare = FALSE, 
+                                rare_freq = NULL)
+
+```
+
+`mJAM_Forward` outputs a list with three tables: `index`, `cs` and `marginal_est`. 
+
+```{r}
+# Here're the selected index SNP(s)
+Ex1_Forward_fit$index
+```
+
+`index` table lists all the index SNP(s) being selected (`SNP`), along with their log10(p-value) conditional on all SNP(s) above (`cond_log10p`), the log10(p-value) conditional on all other index SNP(s) (`final_log10p`), and the p-value threshold used in this analysis (`pcut`). 
+
+We choose to report log10(p-value) instead of p-value on the original scale because R does not support p-value precision smaller than around 1e-300. To avoid ambiguous results under large-effect regions, we calculate p-values on the log/log10 scales and report these. 
+
+```{r}
+# Here're the credible sets SNPs
+Ex1_Forward_fit$cs %>% filter(CS_in == T)
+```
+
+`cs` table records the posterior probabilities of all SNPs being considered for credible set SNPs. Here we only print out those that are selected in the 95% mJAM credible set (rs1, rs8 and rs10) by filtering this table using `CS_in == TRUE`.  
+
+```{r}
+Ex1_Forward_fit$mJAM_marg_est %>% head()
+```
+
+`mJAM_marg_est` provides the marginal estimates of all SNPs under the mJAM model. This includes `mJAM_effect` (the point estimate), `mJAM_se` (the standard error of the point estimate) and `mJAM_log10p` (log10 of the p-value based on point estimate and standard error). 
+
+
+## Example 2: Missing SNP info in some populations {.tabset}
+In the second example, we will explore the scenario when we have missing data in marginal summary statistics and in the reference dosage. The dataset used in example 2 is the same as in example 1, except that there are 2 SNPs made missing in either summary statistics or reference dosage: the dosage of rs15 in population 1 is missing; the summary statistic of rs20 in population 3 is missing. 
+
+
+Now let's load the data: 
+
+```{r}
+# Load marginal betas data 
+MargBeta <- read.table("./Example-Data/Marg_2.txt", 
+                       colClasses = c("character", rep("numeric", 6)))
+names(MargBeta) <- c("SNP", "MargBeta_P1", "MargSEBeta_P1", 
+                     "MargBeta_P2", "MargSEBeta_P2",
+                     "MargBeta_P3", "MargSEBeta_P3")
+
+# Take a look at SNP No.20-25, rs20 in P3 missing
+MargBeta[20:25,]
+```
+
+```{r}
+# Load effective allele frequency data
+EAF <- read.table("./Example-Data/EAF_2.txt",
+                  colClasses = c("character", rep("numeric", 3)))
+names(EAF) <- c("SNP", "EAF_P1", "EAF_P2", "EAF_P3")
+
+# Take a look at SNP No.20-25, rs20 in P3 missing
+EAF[20:25, ]
+```
+
+Note that rs20's `beta`,`se`, and `EAF` are missing in population 3. 
+
+
+```{r}
+# Load individual-level SNP data from reference panel
+RefDosage_P1 <- read.table("./Example-Data/Dosage_S1_2.txt", header = TRUE)
+RefDosage_P2 <- read.table("./Example-Data/Dosage_S2_2.txt", header = TRUE)
+RefDosage_P3 <- read.table("./Example-Data/Dosage_S3_2.txt", header = TRUE)
+
+# Notice that rs15 in P1 is missing
+length(names(RefDosage_P1)); "rs15" %in% names(RefDosage_P1)
+length(names(RefDosage_P2)); "rs15" %in% names(RefDosage_P2)
+length(names(RefDosage_P3)); "rs15" %in% names(RefDosage_P3)
+```
+
+Note that rs15 is missing in the reference panel of population 1. 
+
+
+**Note on input formatting requirement**:  
+
+When combining summary data from multiple populations, remember to put `NA` into where the SNP information is missing in some populations but present in at least one other population. For SNPs that are missing in ALL populations, just exclude them. 
+
+```{r}
+# Fill in rs15 as NAs
+RefDosage_P1 <- cbind(RefDosage_P1[,1:14], NA, RefDosage_P1[,15:49])
+names(RefDosage_P1) <- names(RefDosage_P2)
+```
+
+Now we'll use the marginal summary statistics (`beta`, `se`, `EAF` and `reference dosage`) to run `mJAM-SuSiE` and `mJAM-SuSiE`. 
+
+### mJAM-SuSiE
+```{r}
+# --- Fit mJAM_SuSiE, with missing SNPs. 
+Ex2_SuSiE_fit <- mJAM_SuSiE(marginal.betas = list(MargBeta$MargBeta_P1, MargBeta$MargBeta_P2, MargBeta$MargBeta_P3), 
+                       marginal.se = list(MargBeta$MargSEBeta_P1, MargBeta$MargSEBeta_P2, MargBeta$MargSEBeta_P3), 
+                       EAFs = list(EAF$EAF_P1, EAF$EAF_P2, EAF$EAF_P3), 
+                       N_GWAS = c(5000, 5000, 5000),
+                       X_ref = list(RefDosage_P1,RefDosage_P2,RefDosage_P3),
+                       logORToBeta = FALSE,
+                       p_cases = c(0.5, 0.5, 0.5), 
+                       replace_missing = TRUE,
+                       SNP_names = MargBeta$SNP,
+                       SuSiE_num_comp = 10, 
+                       SuSiE_coverage = 0.95)
+
+## --- mJAM_SuSiE results
+mJAM_SuSiE_get_cs(susie_fit = Ex2_SuSiE_fit$fit, SNP_names = MargBeta$SNP) 
+```
+
+In this toy example, missing values do not affect `mJAM_SuSiE`'s results. 
+
+### mJAM-Forward
+```{r}
+Ex2_Forward_fit <- mJAM_Forward(N_GWAS = c(5000, 5000, 5000),
+                                X_ref = list(RefDosage_P1,RefDosage_P2,RefDosage_P3),
+                                Marg_Result = MargBeta,
+                                EAF_Result = EAF,
+                                condp_cut = 0.05/50, 
+                                within_pop_threshold = 0.50,
+                                across_pop_threshold = 0.20)
+
+
+## --- mJAM Forward results: index SNPs  
+Ex2_Forward_fit$index
+
+## --- mJAM Forward results: credible set SNPs
+Ex2_Forward_fit$cs %>% filter(CS_in == T)
+
+```
+In this toy example, missing values do not affect `mJAM_Forward`'s results. 
+
+
+## session info
+```{r}
+sessionInfo()
+```
 

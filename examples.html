@@ -11,7 +11,7 @@
 
 
 
-<title>Toy Examples of running mJAM</title>
+<title>Toy examples of fitting mJAM</title>
 
 <script src="site_libs/header-attrs-2.14/header-attrs.js"></script>
 <script src="site_libs/jquery-3.6.0/jquery-3.6.0.min.js"></script>
@@ -29,6 +29,9 @@
        h6 {font-size: 12px;}
        code {color: inherit; background-color: rgba(0, 0, 0, 0.04);}
        pre:not([class]) { background-color: white }</style>
+<script src="site_libs/jqueryui-1.11.4/jquery-ui.min.js"></script>
+<link href="site_libs/tocify-1.9.1/jquery.tocify.css" rel="stylesheet" />
+<script src="site_libs/tocify-1.9.1/jquery.tocify.js"></script>
 <script src="site_libs/navigation-1.1/tabsets.js"></script>
 <link href="site_libs/highlightjs-9.12.0/textmate.css" rel="stylesheet" />
 <script src="site_libs/highlightjs-9.12.0/highlight.js"></script>
@@ -222,6 +225,69 @@ $(document).ready(function () {
 
 
 
+<style type="text/css">
+
+#TOC {
+  margin: 25px 0px 20px 0px;
+}
+@media (max-width: 768px) {
+#TOC {
+  position: relative;
+  width: 100%;
+}
+}
+
+@media print {
+.toc-content {
+  /* see https://github.com/w3c/csswg-drafts/issues/4434 */
+  float: right;
+}
+}
+
+.toc-content {
+  padding-left: 30px;
+  padding-right: 40px;
+}
+
+div.main-container {
+  max-width: 1200px;
+}
+
+div.tocify {
+  width: 20%;
+  max-width: 260px;
+  max-height: 85%;
+}
+
+@media (min-width: 768px) and (max-width: 991px) {
+  div.tocify {
+    width: 25%;
+  }
+}
+
+@media (max-width: 767px) {
+  div.tocify {
+    width: 100%;
+    max-width: none;
+  }
+}
+
+.tocify ul, .tocify li {
+  line-height: 20px;
+}
+
+.tocify-subheader .tocify-item {
+  font-size: 0.90em;
+}
+
+.tocify .list-group-item {
+  border-radius: 0px;
+}
+
+
+</style>
+
+
 
 </head>
 
@@ -229,6 +295,16 @@ $(document).ready(function () {
 
 
 <div class="container-fluid main-container">
+
+
+<!-- setup 3col/9col grid for toc_float and main content  -->
+<div class="row">
+<div class="col-xs-12 col-sm-4 col-md-3">
+<div id="TOC" class="tocify">
+</div>
+</div>
+
+<div class="toc-content col-xs-12 col-sm-8 col-md-9">
 
 
 
@@ -266,13 +342,381 @@ $(document).ready(function () {
 
 
 
-<h1 class="title toc-ignore">Toy Examples of running mJAM</h1>
+<h1 class="title toc-ignore">Toy examples of fitting mJAM</h1>
 
 </div>
 
 
-<div id="stay-tuned" class="section level3">
-<h3>Stay tuned!</h3>
+<div id="installation" class="section level2">
+<h2>Installation</h2>
+<pre class="r"><code>devtools::install_github(&quot;USCbiostats/hJAM&quot;)</code></pre>
+</div>
+<div id="special-notes-for-macos-users" class="section level2">
+<h2>Special notes for macOS users</h2>
+<p>For macOS users with apple silicon (M1 Macs), please install R
+version 4.2-arm64 from <a href="https://mac.r-project.org/"
+class="uri">https://mac.r-project.org/</a> . This is a specific build
+for compatibility with the M1 arm-based Macs. One of crucial
+dependencies in <code>mJAM</code>, <code>Rmpfr</code>, is not yet
+compatible with Intel-based R versions running on M1 Macs and it will
+cause R/Rstudio to abort. But using version 4.2-arm64 will solve this
+issue.</p>
+<pre class="r"><code># source(&quot;./Scripts/mJAM_SuSiE_Forward.R&quot;)
+# source(&quot;./Scripts/mJAM_build_CS_v2_med_yty_test.R&quot;)
+# source(&quot;./Scripts/mJAM_logcondp_v3.R&quot;)
+# source(&quot;./Scripts/mJAM_LDpruning.R&quot;)
+# source(&quot;./Scripts/mJAM_Forward.R&quot;)
+library(hJAM)
+library(dplyr) ## for the use of piping operator %&gt;% </code></pre>
+<pre><code>## 
+## Attaching package: &#39;dplyr&#39;</code></pre>
+<pre><code>## The following objects are masked from &#39;package:stats&#39;:
+## 
+##     filter, lag</code></pre>
+<pre><code>## The following objects are masked from &#39;package:base&#39;:
+## 
+##     intersect, setdiff, setequal, union</code></pre>
+</div>
+<div id="example-1-complete-snp-information"
+class="section level2 tabset">
+<h2 class="tabset">Example 1: Complete SNP information</h2>
+<p>In the first example, we’ll illustrate the usage of
+<code>mJAM-SuSiE</code> and <code>mJAM-Forward</code> with a simulated
+dataset, consisting of 3 ancestry groups and 50 SNPs. The first SNP,
+named “rs1”, is the only true causal SNP.</p>
+<p>First, let’s load the marginal summary statistics of these 50
+SNPs.</p>
+<pre class="r"><code># Load marginal betas data 
+MargBeta &lt;- read.table(&quot;./Example-Data/Marg_1.txt&quot;)
+names(MargBeta) &lt;- c(&quot;SNP&quot;, &quot;MargBeta_P1&quot;, &quot;MargSEBeta_P1&quot;, 
+                      &quot;MargBeta_P2&quot;, &quot;MargSEBeta_P2&quot;,
+                      &quot;MargBeta_P3&quot;, &quot;MargSEBeta_P3&quot;)
+head(MargBeta)</code></pre>
+<pre><code>##   SNP MargBeta_P1 MargSEBeta_P1 MargBeta_P2 MargSEBeta_P2 MargBeta_P3
+## 1 rs1  0.06054038    0.02489064 0.077964524    0.02068987 0.026311626
+## 2 rs2 -0.01068437    0.02126704 0.040433268    0.01813179 0.024127159
+## 3 rs3  0.05264446    0.02153163 0.037045359    0.01838805 0.019806117
+## 4 rs4 -0.01167104    0.02121476 0.009254768    0.01826285 0.006243936
+## 5 rs5  0.03411272    0.02145365 0.032849181    0.01819438 0.024697970
+## 6 rs6  0.02948659    0.02152562 0.049799131    0.01836573 0.016761096
+##   MargSEBeta_P3
+## 1    0.02020833
+## 2    0.01781806
+## 3    0.01786128
+## 4    0.01792291
+## 5    0.01774054
+## 6    0.01782569</code></pre>
+<p>Then load the effect allele frequencies (not necessarily the minor
+alleles).</p>
+<pre class="r"><code># Load effective allele frequency data
+EAF &lt;- read.table(&quot;./Example-Data/EAF_1.txt&quot;)
+names(EAF) &lt;- c(&quot;SNP&quot;, &quot;EAF_P1&quot;, &quot;EAF_P2&quot;, &quot;EAF_P3&quot;)
+head(EAF)</code></pre>
+<pre><code>##   SNP EAF_P1 EAF_P2 EAF_P3
+## 1 rs1 0.2010 0.4072 0.6075
+## 2 rs2 0.2374 0.4205 0.5825
+## 3 rs3 0.2329 0.4102 0.5935
+## 4 rs4 0.2394 0.4151 0.5850
+## 5 rs5 0.2386 0.4158 0.5851
+## 6 rs6 0.2344 0.4191 0.5895</code></pre>
+<p>Finally one reference dosage matrix for each ancestry group.</p>
+<pre class="r"><code># Load individual-level SNP data from reference panel
+RefDosage_P1 &lt;- read.table(&quot;./Example-Data/Dosage_S1_1.txt&quot;, header = TRUE)
+RefDosage_P2 &lt;- read.table(&quot;./Example-Data/Dosage_S2_1.txt&quot;, header = TRUE)
+RefDosage_P3 &lt;- read.table(&quot;./Example-Data/Dosage_S3_1.txt&quot;, header = TRUE)
+RefDosage_P1[1:5, 1:5]</code></pre>
+<pre><code>##   rs1 rs2 rs3 rs4 rs5
+## 1   0   0   0   0   0
+## 2   0   0   0   0   0
+## 3   0   1   0   0   1
+## 4   1   1   1   0   1
+## 5   1   1   1   0   1</code></pre>
+<pre class="r"><code>RefDosage_P2[1:5, 1:5]</code></pre>
+<pre><code>##   rs1 rs2 rs3 rs4 rs5
+## 1   1   2   1   2   2
+## 2   0   0   0   0   0
+## 3   0   0   0   0   2
+## 4   0   0   0   0   0
+## 5   0   0   0   0   0</code></pre>
+<pre class="r"><code>RefDosage_P3[1:5, 1:5]</code></pre>
+<pre><code>##   rs1 rs2 rs3 rs4 rs5
+## 1   0   1   0   1   0
+## 2   1   0   0   1   1
+## 3   1   1   1   1   0
+## 4   2   2   1   1   2
+## 5   1   1   2   0   1</code></pre>
+<p>Now we’ll use the marginal summary statistics (<code>beta</code>,
+<code>se</code>, <code>EAF</code> and <code>reference dosage</code>) to
+run <code>mJAM-SuSiE</code> and <code>mJAM-SuSiE</code>.</p>
+<div id="mjam-susie" class="section level3">
+<h3>mJAM-SuSiE</h3>
+<pre class="r"><code># --- Fit mJAM_SuSiE
+Ex1_SuSiE_fit &lt;- mJAM_SuSiE(marginal.betas = list(MargBeta$MargBeta_P1, MargBeta$MargBeta_P2, MargBeta$MargBeta_P3), 
+                      marginal.se = list(MargBeta$MargSEBeta_P1, MargBeta$MargSEBeta_P2, MargBeta$MargSEBeta_P3), 
+                      EAFs = list(EAF$EAF_P1, EAF$EAF_P2, EAF$EAF_P3), 
+                      N_GWAS = c(5000, 5000, 5000),
+                      X_ref = list(RefDosage_P1,RefDosage_P2,RefDosage_P3),
+                      logORToBeta = FALSE,
+                      SNP_names = MargBeta$SNP,
+                      SuSiE_num_comp = 10, 
+                      SuSiE_coverage = 0.95)
+## --- mJAM_SuSiE results
+mJAM_SuSiE_get_cs(susie_fit = Ex1_SuSiE_fit$fit, SNP_names = MargBeta$SNP)</code></pre>
+<pre><code>##   index  coverage CS_size index_SNP CS_SNP
+## 1    L1 0.9558736       2       rs1    rs1
+## 2    L1 0.9558736       2       rs1    rs8</code></pre>
+<p><code>mJAM_SuSiE</code> outputs a table with 5 columns:
+<code>index</code>, <code>coverage</code>,
+<code>CS_size</code>,<code>index_SNP</code> and <code>CS_SNP</code>.</p>
+<ul>
+<li><code>index</code> is a label for a distinct credible set.</li>
+<li><code>coverage</code> is the empirical coverage of this credible
+set.</li>
+<li><code>CS_size</code> shows how many SNPs in total are there in this
+credible set.</li>
+<li><code>index_SNP</code> is the name of the index SNP (SNP with
+highest posterior probability) in this credible set.</li>
+<li><code>CS_SNP</code> is names of individual SNPs selected in this
+credible set.</li>
+</ul>
+</div>
+<div id="mjam-forward" class="section level3">
+<h3>mJAM-Forward</h3>
+<pre class="r"><code># --- Fit mJAM_Forward 
+Ex1_Forward_fit &lt;- mJAM_Forward(N_GWAS = c(5000, 5000, 5000), 
+                                X_ref = list(RefDosage_P1,RefDosage_P2,RefDosage_P3), 
+                                Marg_Result = MargBeta,
+                                EAF_Result = EAF, 
+                                condp_cut = 0.05/50, # Bonferroni-corrected p-val
+                                within_pop_threshold = 0.50, 
+                                across_pop_threshold = 0.20,
+                                coverage = 0.95,
+                                filter_rare = FALSE, 
+                                rare_freq = NULL)</code></pre>
+<pre><code>## No. 1 selected index SNP: rs1</code></pre>
+<pre><code>## 10 SNPs got pruned. 41 SNPs left.</code></pre>
+<pre><code>## Continue to next round of index SNP selection.</code></pre>
+<pre><code>## Analysis ended.</code></pre>
+<p><code>mJAM_Forward</code> outputs a list with three tables:
+<code>index</code>, <code>cs</code> and <code>marginal_est</code>.</p>
+<pre class="r"><code># Here&#39;re the selected index SNP(s)
+Ex1_Forward_fit$index</code></pre>
+<pre><code>## # A tibble: 1 × 4
+##   SNP   cond_log10p final_log10p  pcut
+##   &lt;chr&gt;       &lt;dbl&gt;        &lt;dbl&gt; &lt;dbl&gt;
+## 1 rs1         -4.86        -4.86 0.001</code></pre>
+<p><code>index</code> table lists all the index SNP(s) being selected
+(<code>SNP</code>), along with their log10(p-value) conditional on all
+SNP(s) above (<code>cond_log10p</code>), the log10(p-value) conditional
+on all other index SNP(s) (<code>final_log10p</code>), and the p-value
+threshold used in this analysis (<code>pcut</code>).</p>
+<p>We choose to report log10(p-value) instead of p-value on the original
+scale because R does not support p-value precision smaller than around
+1e-300. To avoid ambiguous results under large-effect regions, we
+calculate p-values on the log/log10 scales and report these.</p>
+<pre class="r"><code># Here&#39;re the credible sets SNPs
+Ex1_Forward_fit$cs %&gt;% filter(CS_in == T)</code></pre>
+<pre><code>## # A tibble: 3 × 12
+##   CS_SNP Post_…¹ Post_…² Post_…³ Med_E…⁴ Post_…⁵ Post_…⁶ SD_Po…⁷ CumSu…⁸ Empir…⁹
+##   &lt;chr&gt;  &lt;chr&gt;     &lt;dbl&gt;   &lt;dbl&gt;   &lt;dbl&gt;   &lt;dbl&gt;   &lt;dbl&gt;   &lt;dbl&gt;   &lt;dbl&gt;   &lt;dbl&gt;
+## 1 rs1    1.9516…  1       1       0        1       1      0.768    0.768   0.955
+## 2 rs8    4.0410…  0.207   0.207   0.0276   0.826   0.826  0.131    0.899   0.955
+## 3 rs10   1.6762…  0.0859  0.0859  0.0291   0.850   0.850  0.0560   0.955   0.955
+## # … with 2 more variables: CS_in &lt;lgl&gt;, index_SNP &lt;chr&gt;, and abbreviated
+## #   variable names ¹​Post_Model_Prob, ²​Post_Model_Prob_Ratio,
+## #   ³​Post_Model_Prob_Ratio2, ⁴​Med_Effect_Size, ⁵​Post_Med_Prob, ⁶​Post_Med_Prob2,
+## #   ⁷​SD_Post_CS_Prob, ⁸​CumSum_Porb, ⁹​EmpiricalCut</code></pre>
+<p><code>cs</code> table records the posterior probabilities of all SNPs
+being considered for credible set SNPs. Here we only print out those
+that are selected in the 95% mJAM credible set (rs1, rs8 and rs10) by
+filtering this table using <code>CS_in == TRUE</code>.</p>
+<pre class="r"><code>Ex1_Forward_fit$mJAM_marg_est %&gt;% head()</code></pre>
+<pre><code>## # A tibble: 6 × 4
+##   SNP   mJAM_effect mJAM_se mJAM_log10p
+##   &lt;chr&gt;       &lt;dbl&gt;   &lt;dbl&gt;       &lt;dbl&gt;
+## 1 rs1       0.0544   0.0125     -4.87  
+## 2 rs2       0.0206   0.0112     -1.18  
+## 3 rs3       0.035    0.0113     -2.71  
+## 4 rs4       0.00245  0.0112     -0.0826
+## 5 rs5       0.0302   0.0112     -2.15  
+## 6 rs6       0.0323   0.0112     -2.41</code></pre>
+<p><code>mJAM_marg_est</code> provides the marginal estimates of all
+SNPs under the mJAM model. This includes <code>mJAM_effect</code> (the
+point estimate), <code>mJAM_se</code> (the standard error of the point
+estimate) and <code>mJAM_log10p</code> (log10 of the p-value based on
+point estimate and standard error).</p>
+</div>
+</div>
+<div id="example-2-missing-snp-info-in-some-populations"
+class="section level2 tabset">
+<h2 class="tabset">Example 2: Missing SNP info in some populations</h2>
+<p>In the second example, we will explore the scenario when we have
+missing data in marginal summary statistics and in the reference dosage.
+The dataset used in example 2 is the same as in example 1, except that
+there are 2 SNPs made missing in either summary statistics or reference
+dosage: the dosage of rs15 in population 1 is missing; the summary
+statistic of rs20 in population 3 is missing.</p>
+<p>Now let’s load the data:</p>
+<pre class="r"><code># Load marginal betas data 
+MargBeta &lt;- read.table(&quot;./Example-Data/Marg_2.txt&quot;, 
+                       colClasses = c(&quot;character&quot;, rep(&quot;numeric&quot;, 6)))
+names(MargBeta) &lt;- c(&quot;SNP&quot;, &quot;MargBeta_P1&quot;, &quot;MargSEBeta_P1&quot;, 
+                     &quot;MargBeta_P2&quot;, &quot;MargSEBeta_P2&quot;,
+                     &quot;MargBeta_P3&quot;, &quot;MargSEBeta_P3&quot;)
+
+# Take a look at SNP No.20-25, rs20 in P3 missing
+MargBeta[20:25,]</code></pre>
+<pre><code>##     SNP  MargBeta_P1 MargSEBeta_P1 MargBeta_P2 MargSEBeta_P2  MargBeta_P3
+## 20 rs20  0.001697950    0.02514703  0.01435850    0.02056006           NA
+## 21 rs21 -0.010286390    0.02488344 -0.06636717    0.02066592 -0.009864962
+## 22 rs22  0.035685926    0.02539317  0.03215446    0.02055493 -0.034835993
+## 23 rs23  0.031534739    0.02484755  0.04407369    0.02058289 -0.026641422
+## 24 rs24 -0.002939056    0.02526160  0.01915812    0.02059609 -0.008948019
+## 25 rs25 -0.005859474    0.02549730 -0.01123426    0.02081805 -0.027068635
+##    MargSEBeta_P3
+## 20            NA
+## 21    0.02024422
+## 22    0.02054327
+## 23    0.02026291
+## 24    0.02053724
+## 25    0.02019436</code></pre>
+<pre class="r"><code># Load effective allele frequency data
+EAF &lt;- read.table(&quot;./Example-Data/EAF_2.txt&quot;,
+                  colClasses = c(&quot;character&quot;, rep(&quot;numeric&quot;, 3)))
+names(EAF) &lt;- c(&quot;SNP&quot;, &quot;EAF_P1&quot;, &quot;EAF_P2&quot;, &quot;EAF_P3&quot;)
+
+# Take a look at SNP No.20-25, rs20 in P3 missing
+EAF[20:25, ]</code></pre>
+<pre><code>##     SNP EAF_P1 EAF_P2 EAF_P3
+## 20 rs20 0.1957 0.3927     NA
+## 21 rs21 0.2046 0.3954 0.5990
+## 22 rs22 0.1999 0.3968 0.5998
+## 23 rs23 0.1995 0.4047 0.5998
+## 24 rs24 0.1974 0.3973 0.6099
+## 25 rs25 0.1979 0.4015 0.5992</code></pre>
+<p>Note that rs20’s <code>beta</code>,<code>se</code>, and
+<code>EAF</code> are missing in population 3.</p>
+<pre class="r"><code># Load individual-level SNP data from reference panel
+RefDosage_P1 &lt;- read.table(&quot;./Example-Data/Dosage_S1_2.txt&quot;, header = TRUE)
+RefDosage_P2 &lt;- read.table(&quot;./Example-Data/Dosage_S2_2.txt&quot;, header = TRUE)
+RefDosage_P3 &lt;- read.table(&quot;./Example-Data/Dosage_S3_2.txt&quot;, header = TRUE)
+
+# Notice that rs15 in P1 is missing
+length(names(RefDosage_P1)); &quot;rs15&quot; %in% names(RefDosage_P1)</code></pre>
+<pre><code>## [1] 49</code></pre>
+<pre><code>## [1] FALSE</code></pre>
+<pre class="r"><code>length(names(RefDosage_P2)); &quot;rs15&quot; %in% names(RefDosage_P2)</code></pre>
+<pre><code>## [1] 50</code></pre>
+<pre><code>## [1] TRUE</code></pre>
+<pre class="r"><code>length(names(RefDosage_P3)); &quot;rs15&quot; %in% names(RefDosage_P3)</code></pre>
+<pre><code>## [1] 50</code></pre>
+<pre><code>## [1] TRUE</code></pre>
+<p>Note that rs15 is missing in the reference panel of population 1.</p>
+<p><strong>Note on input formatting requirement</strong>:</p>
+<p>When combining summary data from multiple populations, remember to
+put <code>NA</code> into where the SNP information is missing in some
+populations but present in at least one other population. For SNPs that
+are missing in ALL populations, just exclude them.</p>
+<pre class="r"><code># Fill in rs15 as NAs
+RefDosage_P1 &lt;- cbind(RefDosage_P1[,1:14], NA, RefDosage_P1[,15:49])
+names(RefDosage_P1) &lt;- names(RefDosage_P2)</code></pre>
+<p>Now we’ll use the marginal summary statistics (<code>beta</code>,
+<code>se</code>, <code>EAF</code> and <code>reference dosage</code>) to
+run <code>mJAM-SuSiE</code> and <code>mJAM-SuSiE</code>.</p>
+<div id="mjam-susie-1" class="section level3">
+<h3>mJAM-SuSiE</h3>
+<pre class="r"><code># --- Fit mJAM_SuSiE, with missing SNPs. 
+Ex2_SuSiE_fit &lt;- mJAM_SuSiE(marginal.betas = list(MargBeta$MargBeta_P1, MargBeta$MargBeta_P2, MargBeta$MargBeta_P3), 
+                       marginal.se = list(MargBeta$MargSEBeta_P1, MargBeta$MargSEBeta_P2, MargBeta$MargSEBeta_P3), 
+                       EAFs = list(EAF$EAF_P1, EAF$EAF_P2, EAF$EAF_P3), 
+                       N_GWAS = c(5000, 5000, 5000),
+                       X_ref = list(RefDosage_P1,RefDosage_P2,RefDosage_P3),
+                       logORToBeta = FALSE,
+                       p_cases = c(0.5, 0.5, 0.5), 
+                       replace_missing = TRUE,
+                       SNP_names = MargBeta$SNP,
+                       SuSiE_num_comp = 10, 
+                       SuSiE_coverage = 0.95)
+
+## --- mJAM_SuSiE results
+mJAM_SuSiE_get_cs(susie_fit = Ex2_SuSiE_fit$fit, SNP_names = MargBeta$SNP) </code></pre>
+<pre><code>##   index  coverage CS_size index_SNP CS_SNP
+## 1    L1 0.9560648       2       rs1    rs1
+## 2    L1 0.9560648       2       rs1    rs8</code></pre>
+<p>In this toy example, missing values do not affect
+<code>mJAM_SuSiE</code>’s results.</p>
+</div>
+<div id="mjam-forward-1" class="section level3">
+<h3>mJAM-Forward</h3>
+<pre class="r"><code>Ex2_Forward_fit &lt;- mJAM_Forward(N_GWAS = c(5000, 5000, 5000),
+                                X_ref = list(RefDosage_P1,RefDosage_P2,RefDosage_P3),
+                                Marg_Result = MargBeta,
+                                EAF_Result = EAF,
+                                condp_cut = 0.05/50, 
+                                within_pop_threshold = 0.50,
+                                across_pop_threshold = 0.20)</code></pre>
+<pre><code>## No. 1 selected index SNP: rs1</code></pre>
+<pre><code>## 10 SNPs got pruned. 41 SNPs left.</code></pre>
+<pre><code>## Continue to next round of index SNP selection.</code></pre>
+<pre><code>## Analysis ended.</code></pre>
+<pre class="r"><code>## --- mJAM Forward results: index SNPs  
+Ex2_Forward_fit$index</code></pre>
+<pre><code>## # A tibble: 1 × 4
+##   SNP   cond_log10p final_log10p  pcut
+##   &lt;chr&gt;       &lt;dbl&gt;        &lt;dbl&gt; &lt;dbl&gt;
+## 1 rs1         -4.86        -4.86 0.001</code></pre>
+<pre class="r"><code>## --- mJAM Forward results: credible set SNPs
+Ex2_Forward_fit$cs %&gt;% filter(CS_in == T)</code></pre>
+<pre><code>## # A tibble: 3 × 12
+##   CS_SNP Post_…¹ Post_…² Post_…³ Med_E…⁴ Post_…⁵ Post_…⁶ SD_Po…⁷ CumSu…⁸ Empir…⁹
+##   &lt;chr&gt;  &lt;chr&gt;     &lt;dbl&gt;   &lt;dbl&gt;   &lt;dbl&gt;   &lt;dbl&gt;   &lt;dbl&gt;   &lt;dbl&gt;   &lt;dbl&gt;   &lt;dbl&gt;
+## 1 rs1    1.9517…  1       1       0        1       1      0.768    0.768   0.955
+## 2 rs8    4.0432…  0.207   0.207   0.0276   0.826   0.826  0.131    0.899   0.955
+## 3 rs10   1.6770…  0.0859  0.0859  0.0291   0.850   0.850  0.0561   0.955   0.955
+## # … with 2 more variables: CS_in &lt;lgl&gt;, index_SNP &lt;chr&gt;, and abbreviated
+## #   variable names ¹​Post_Model_Prob, ²​Post_Model_Prob_Ratio,
+## #   ³​Post_Model_Prob_Ratio2, ⁴​Med_Effect_Size, ⁵​Post_Med_Prob, ⁶​Post_Med_Prob2,
+## #   ⁷​SD_Post_CS_Prob, ⁸​CumSum_Porb, ⁹​EmpiricalCut</code></pre>
+<p>In this toy example, missing values do not affect
+<code>mJAM_Forward</code>’s results.</p>
+</div>
+</div>
+<div id="session-info" class="section level2">
+<h2>session info</h2>
+<pre class="r"><code>sessionInfo()</code></pre>
+<pre><code>## R version 4.2.0 (2022-04-22)
+## Platform: aarch64-apple-darwin20 (64-bit)
+## Running under: macOS Monterey 12.4
+## 
+## Matrix products: default
+## BLAS:   /Library/Frameworks/R.framework/Versions/4.2-arm64/Resources/lib/libRblas.0.dylib
+## LAPACK: /Library/Frameworks/R.framework/Versions/4.2-arm64/Resources/lib/libRlapack.dylib
+## 
+## locale:
+## [1] en_US.UTF-8/en_US.UTF-8/en_US.UTF-8/C/en_US.UTF-8/en_US.UTF-8
+## 
+## attached base packages:
+## [1] stats     graphics  grDevices utils     datasets  methods   base     
+## 
+## other attached packages:
+## [1] dplyr_1.0.10 hJAM_1.0.1  
+## 
+## loaded via a namespace (and not attached):
+##  [1] shape_1.4.6      tidyselect_1.1.2 xfun_0.32        bslib_0.4.0     
+##  [5] purrr_0.3.4      reshape2_1.4.4   splines_4.2.0    lattice_0.20-45 
+##  [9] colorspace_2.0-3 vctrs_0.4.1      generics_0.1.3   htmltools_0.5.3 
+## [13] yaml_2.3.5       gmp_0.6-6        utf8_1.2.2       survival_3.3-1  
+## [17] rlang_1.0.5      jquerylib_0.1.4  pillar_1.8.1     glue_1.6.2      
+## [21] Rmpfr_0.8-9      DBI_1.1.3        foreach_1.5.2    lifecycle_1.0.1 
+## [25] plyr_1.8.7       stringr_1.4.1    munsell_0.5.0    gtable_0.3.1    
+## [29] codetools_0.2-18 evaluate_0.16    knitr_1.40       fastmap_1.1.0   
+## [33] fansi_1.0.3      Rcpp_1.0.9       scales_1.2.1     susieR_0.10.0   
+## [37] cachem_1.0.6     jsonlite_1.8.0   ggplot2_3.3.6    digest_0.6.29   
+## [41] stringi_1.7.8    grid_4.2.0       cli_3.3.0        tools_4.2.0     
+## [45] magrittr_2.0.3   sass_0.4.2       glmnet_4.1-4     tibble_3.1.8    
+## [49] pkgconfig_2.0.3  ellipsis_0.3.2   Matrix_1.4-1     matrixcalc_1.0-5
+## [53] assertthat_0.2.1 rmarkdown_2.14   reshape_0.8.9    rstudioapi_0.14 
+## [57] iterators_1.0.14 R6_2.5.1         compiler_4.2.0</code></pre>
 </div>
 
 <br><br>
@@ -291,6 +735,8 @@ This site is hosted by Github Pages and is built on R Markdown. </p>
 
 
 
+</div>
+</div>
 
 </div>
 
@@ -323,6 +769,35 @@ $(document).ready(function () {
 
 <!-- code folding -->
 
+<script>
+$(document).ready(function ()  {
+
+    // temporarily add toc-ignore selector to headers for the consistency with Pandoc
+    $('.unlisted.unnumbered').addClass('toc-ignore')
+
+    // move toc-ignore selectors from section div to header
+    $('div.section.toc-ignore')
+        .removeClass('toc-ignore')
+        .children('h1,h2,h3,h4,h5').addClass('toc-ignore');
+
+    // establish options
+    var options = {
+      selectors: "h1,h2,h3",
+      theme: "bootstrap3",
+      context: '.toc-content',
+      hashGenerator: function (text) {
+        return text.replace(/[.\\/?&!#<>]/g, '').replace(/\s/g, '_');
+      },
+      ignoreSelector: ".toc-ignore",
+      scrollTo: 0
+    };
+    options.showAndHide = true;
+    options.smoothScroll = true;
+
+    // tocify
+    var toc = $("#TOC").tocify(options).data("toc-tocify");
+});
+</script>
 
 <!-- dynamically load mathjax for compatibility with self-contained -->
 <script>

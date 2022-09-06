@@ -1,0 +1,19 @@
+---
+title: "Reference"
+---
+
+### Statistical Methodology
+ 
+* Newcombe, P. J., Conti, D. V., & Richardson, S. (2016). JAM: A Scalable Bayesian Framework for Joint Analysis of Marginal SNP Effects. *Genetic epidemiology*, 40(3), 188–201. https://doi.org/10.1002/gepi.21953
+* Shen, J., Jiang, L., Wang, K., Wang, A., Chen, F., Haiman, C.A. & Conti, D.V. (2022). Multiethnic Joint Analysis of Marginal Summary Statistics from Genome-wide Association Studies. *Manuscript in preparation.* 
+
+### Applications on Prostate Cancer 
+* Conti, D. V., Darst, B. F., Moss, L. C., Saunders, E. J., Sheng, X., Chou, A., Schumacher, F. R., Olama, A., Benlloch, S., Dadaev, T., Brook, M. N., Sahimi, A., Hoffmann, T. J., Takahashi, A., Matsuda, K., Momozawa, Y., Fujita, M., Muir, K., Lophatananon, A., Wan, P., … Haiman, C. A. (2021). Trans-ancestry genome-wide association meta-analysis of prostate cancer identifies new susceptibility loci and informs genetic risk prediction. *Nature genetics*, 53(1), 65–75. https://doi.org/10.1038/s41588-020-00748-0 
+* Wang, A., Shen, J., Rodriguez, A., Saunders, E., Chen, F., Janivara, R., Darst, B., Sheng, X., Xu, Y., Chou, A., Nakagama, H., Witte, J., Gaziano, J., Justice, A., Mancuso, N., Terao, C., Eeles, R., Kote-Jarai, Z., Madduri, R., Conti, D.V. & Haiman, A.C. (2022). Characterizing prostate cancer risk through multi-ancestry genome-wide discovery of 187 novel risk variants. *Manuscript submitted for publication.* 
+
+
+### Software: 
+[hJAM and mJAM available on Github](https://github.com/USCbiostats/hJAM)
+
+### Tutorial: 
+Check out some examples of running mJAM ([here](examples.html)).

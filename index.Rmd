@@ -1,15 +1,6 @@
 ---
 title: "\"mJAM\"  \nMulti-ethnic Joint Analysis of Marginal Summary Statistics"
-output:
-  prettydoc::html_pretty:
-    theme: leonids
 ---
 
 Thank you for checking out mJAM! 
 
-Stay tuned for: 
-
-* link to JAM, hJAM, Nat Gen paper on PC 
-* link to `hJAM` package (where mJAM scripts are stored at the moment.) 
-* manuscript reference 
-* some examples of running mJAM ([click here](examples.html))

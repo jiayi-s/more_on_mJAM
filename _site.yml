@@ -3,12 +3,15 @@ output_dir: "."
 navbar:
   title: "Home"
   right:
-    - text: "Examples"
+    - text: "Reference"
+      href: reference.html
+    - text: "Software and Tutorial"
       href: examples.html
-    - icon: fa-envelope fa-lg
-      href: mailto:<shenjiay@usc.edu>
-    - icon: fa-github fa-lg
-      href: https://github.com/USCbiostats/hJAM/
+    - text: "Contact"
+      href: contact.html
 output:
-  prettydoc::html_pretty:
-    theme: leonids
+  html_document:
+    theme: paper
+    highlight: textmate
+    include:
+      after_body: footer.html

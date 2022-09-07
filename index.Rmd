@@ -1,6 +1,10 @@
 ---
-title: "\"mJAM\"  \nMulti-ethnic Joint Analysis of Marginal Summary Statistics"
+title: "Fine-Mapping and Credible Set Construction using a Multi-population Joint Analysis of Marginal Summary Statistics from Genome-wide Association Studies"
+abstract: | 
+  Trans-ethnic genetic studies may increase power to detect novel risk variants and improve fine-mapping resolution. Here, we expand upon our previous approach for single and multi-population fine-mapping through Joint Analysis of Marginal SNP Effects (mJAM) to develop an approach for determining credible set SNPs.  The approach utilizes mJAM to use population-specific summary statistics to fit a single conditional model that incorporates ancestry-specific reference linkage disequilibrium (LD).  The mJAM framework can be used to first select index SNPs using any feature selection approach, such as forward selection, Bayesian selection, or regularized regression. Then, given a set of index SNPs within each region, the posterior inclusion probability (PIP) of a SNP is defined as a combination of two probabilities: one models the marginal association between the candidate SNP and the outcome; the other models the mediation effect of the index SNP on the candidate SNP, borrowing from a mediation framework. These PIPs are then used to construct credible sets. We first illustrate mJAM for selecting index SNPs through two implementations for selection: mJAM-SuSiE (a Bayesian approach) and mJAM-forward selection. We then compare these approaches to fixed-effect meta-analysis, COJO stepwise selection, and MsCAVIAR. When available, we also compare credible set performance. Through simulation studies, we demonstrate that mJAM performs better than other existing multi-ethnic methods for identifying index SNPs and corresponding credible sets that include the underlying causal variants. In a real data application, we apply this approach to the most recent summary statistics from a trans-ethnic prostate cancer GWAS.
 ---
 
-Thank you for checking out mJAM! 
+### Software availability
+
+[available on Github](https://github.com/USCbiostats/hJAM)
 

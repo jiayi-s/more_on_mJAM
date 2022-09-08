@@ -13,7 +13,7 @@ title: "Reference"
 
 
 ### Software: 
-[hJAM and mJAM available on Github](https://github.com/USCbiostats/hJAM)
+[mJAM available on Github as part of the 'hJAM' package](https://github.com/USCbiostats/hJAM)
 
 ### Tutorial: 
 Check out some examples of running mJAM ([here](examples.html)).

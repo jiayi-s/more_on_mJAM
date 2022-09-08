@@ -6,5 +6,5 @@ abstract: |
 
 ### Software availability
 
-[available on Github](https://github.com/USCbiostats/hJAM)
+[mJAM is available on Github as part of the 'hJAM' package](https://github.com/USCbiostats/hJAM)
 

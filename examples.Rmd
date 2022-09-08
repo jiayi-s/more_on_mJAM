@@ -20,6 +20,9 @@ if(!"matrixcalc" %in% installed.packages()){install.packages("matrixcalc")}
 
 
 ## Installation 
+
+Please install the package `hJAM` (Hierarchical Joint Analysis of Marginal Summary Statistics) from github as `mJAM` is developed as part of the `hJAM` package. We're in the process of integrating functions from `hJAM` and those from `mJAM`. 
+
 ```{r eval=FALSE}
 devtools::install_github("USCbiostats/hJAM")
 ```

@@ -21,7 +21,7 @@ if(!"matrixcalc" %in% installed.packages()){install.packages("matrixcalc")}
 
 ## Installation 
 
-Please install the package `hJAM` (Hierarchical Joint Analysis of Marginal Summary Statistics) from github as `mJAM` is developed as part of the `hJAM` package. We're in the process of integrating functions from `hJAM` and those from `mJAM`. 
+Please install the package `hJAM` (Hierarchical Joint Analysis of Marginal Summary Statistics) from github as `mJAM` is developed as part of the `hJAM` package. The `hJAM` package also contains other `JAM`-family approaches: `hJAM` (for MR and TWAS) and `SHAJAM` (for MR and TWAS with high-dimensional intermediates).  
 
 ```{r eval=FALSE}
 devtools::install_github("USCbiostats/hJAM")
@@ -32,12 +32,6 @@ devtools::install_github("USCbiostats/hJAM")
 For macOS users with apple silicon (M1 Macs), please install R version 4.2-arm64 from https://mac.r-project.org/ . This is a specific build for compatibility with the M1 arm-based Macs. One of crucial dependencies in `mJAM`, `Rmpfr`, is not yet compatible with Intel-based R versions running on M1 Macs and it will cause R/Rstudio to abort. But using version 4.2-arm64 will solve this issue. 
 
 ```{r load-pkg}
-# source("./Scripts/mJAM_SuSiE_Forward.R")
-# source("./Scripts/mJAM_build_CS_v2_med_yty_test.R")
-# source("./Scripts/mJAM_logcondp_v3.R")
-# source("./Scripts/mJAM_LDpruning.R")
-# source("./Scripts/mJAM_Forward2.R")
-
 library(hJAM)
 library(dplyr) ## for the use of piping operator %>% 
 ```
@@ -45,7 +39,7 @@ library(dplyr) ## for the use of piping operator %>%
 ## Example 1: Complete SNP information {.tabset}
 
 
-In the first example, we'll illustrate the usage of `mJAM-SuSiE` and `mJAM-Forward` with a simulated dataset, consisting of 3 ancestry groups and 50 SNPs. The first SNP, named "rs1", is the only true causal SNP.  
+In the first example, we'll illustrate the usage of `mJAM-SuSiE` and `mJAM-Forward` with a simulated dataset, consisting of 3 ancestry groups and 50 SNPs. These 50 SNPs consist of 5 LD blocks, each with 10 SNPs and uniform pairwise LD between them. The first SNP, named "rs1", is the only true causal SNP.  
  
 First, let's load the marginal summary statistics of these 50 SNPs. 
 
@@ -79,6 +73,46 @@ RefDosage_P3[1:5, 1:5]
 
 Now we'll use the marginal summary statistics (`beta`, `se`, `EAF` and `reference dosage`) to run `mJAM-SuSiE` and `mJAM-SuSiE`. 
 
+### mJAM-Forward
+```{r}
+# --- Fit mJAM_Forward 
+Ex1_Forward_fit <- mJAM_Forward(N_GWAS = c(5000, 5000, 5000), 
+                                X_ref = list(RefDosage_P1,RefDosage_P2,RefDosage_P3), 
+                                Marg_Result = MargBeta,
+                                EAF_Result = EAF, 
+                                condp_cut = 0.05/50, # Bonferroni-corrected p-val
+                                within_pop_threshold = 0.50, 
+                                across_pop_threshold = 0.20,
+                                coverage = 0.95)
+
+```
+
+`mJAM_Forward` outputs a list with three tables: `index`, `cs` and `marginal_est`. 
+
+```{r}
+# Here're the selected index SNP(s)
+Ex1_Forward_fit$index
+```
+
+`index` table lists all the index SNP(s) being selected (`SNP`), along with their log10(p-value) conditional on all SNP(s) above (`cond_log10p`), the log10(p-value) conditional on all other index SNP(s) (`final_log10p`), and the p-value threshold used in this analysis (`pcut`). `b_joint` is the conditional effect estimates in the final model, and `b_joint_var` is the squared standard error of `b_joint`.  
+
+We choose to report log10(p-value) instead of p-value on the original scale because R does not support p-value precision smaller than around 1e-300. To avoid ambiguous results under large-effect regions, we calculate p-values on the log/log10 scales and report these. 
+
+```{r}
+# Here're the credible sets SNPs
+Ex1_Forward_fit$cs %>% filter(CS_in == T)
+```
+
+`cs` table records the posterior probabilities of all SNPs being considered for credible set SNPs. `Post_Model_Prob` stands for posterior model probability which quantifies the marginal association between `CS_SNP` and its `index_SNP`. `Post_Med_Prob` stands for posterior mediation probability which quantifies the mediation effect of the `CS_SNP` through `index_SNP`. Stronger LD between `CS_SNP` and `index_SNP` often leads to larger `Post_Med_Prob`. By taking the product of `Post_Model_Prob` and `Post_Med_Prob` and then standardizing, we have `SD_Post_CS_Prob` which we use to determine the credible set.  
+
+Here we only print out those that are selected in the 95% mJAM credible set (rs1, rs8 and rs10) by filtering this table using `CS_in == TRUE`.  
+
+```{r}
+Ex1_Forward_fit$mJAM_marg_est %>% head()
+```
+
+If you'd like to check out the multi-population marginal estimates from mJAM, `mJAM_marg_est` provides the marginal estimates of all SNPs under the mJAM model. This includes `mJAM_effect` (the point estimate), `mJAM_se` (the standard error of the point estimate) and `mJAM_log10p` (log10 of the p-value based on point estimate and standard error). 
+
 
 ### mJAM-SuSiE
 
@@ -89,7 +123,6 @@ Ex1_SuSiE_fit <- mJAM_SuSiE(marginal.betas = list(MargBeta$MargBeta_P1, MargBeta
                       EAFs = list(EAF$EAF_P1, EAF$EAF_P2, EAF$EAF_P3), 
                       N_GWAS = c(5000, 5000, 5000),
                       X_ref = list(RefDosage_P1,RefDosage_P2,RefDosage_P3),
-                      logORToBeta = FALSE,
                       SNP_names = MargBeta$SNP,
                       SuSiE_num_comp = 10, 
                       SuSiE_coverage = 0.95)
@@ -105,46 +138,7 @@ mJAM_SuSiE_get_cs(susie_fit = Ex1_SuSiE_fit$fit, SNP_names = MargBeta$SNP)
 - `index_SNP` is the name of the index SNP (SNP with highest posterior probability) in this credible set.
 - `CS_SNP` is names of individual SNPs selected in this credible set.
 
-
-### mJAM-Forward
-```{r}
-# --- Fit mJAM_Forward 
-Ex1_Forward_fit <- mJAM_Forward(N_GWAS = c(5000, 5000, 5000), 
-                                X_ref = list(RefDosage_P1,RefDosage_P2,RefDosage_P3), 
-                                Marg_Result = MargBeta,
-                                EAF_Result = EAF, 
-                                condp_cut = 0.05/50, # Bonferroni-corrected p-val
-                                within_pop_threshold = 0.50, 
-                                across_pop_threshold = 0.20,
-                                coverage = 0.95,
-                                filter_rare = FALSE, 
-                                rare_freq = NULL)
-
-```
-
-`mJAM_Forward` outputs a list with three tables: `index`, `cs` and `marginal_est`. 
-
-```{r}
-# Here're the selected index SNP(s)
-Ex1_Forward_fit$index
-```
-
-`index` table lists all the index SNP(s) being selected (`SNP`), along with their log10(p-value) conditional on all SNP(s) above (`cond_log10p`), the log10(p-value) conditional on all other index SNP(s) (`final_log10p`), and the p-value threshold used in this analysis (`pcut`). 
-
-We choose to report log10(p-value) instead of p-value on the original scale because R does not support p-value precision smaller than around 1e-300. To avoid ambiguous results under large-effect regions, we calculate p-values on the log/log10 scales and report these. 
-
-```{r}
-# Here're the credible sets SNPs
-Ex1_Forward_fit$cs %>% filter(CS_in == T)
-```
-
-`cs` table records the posterior probabilities of all SNPs being considered for credible set SNPs. Here we only print out those that are selected in the 95% mJAM credible set (rs1, rs8 and rs10) by filtering this table using `CS_in == TRUE`.  
-
-```{r}
-Ex1_Forward_fit$mJAM_marg_est %>% head()
-```
-
-`mJAM_marg_est` provides the marginal estimates of all SNPs under the mJAM model. This includes `mJAM_effect` (the point estimate), `mJAM_se` (the standard error of the point estimate) and `mJAM_log10p` (log10 of the p-value based on point estimate and standard error). 
+In this example, mJAM-SuSiE identifies one credible set with `rs1` and `rs8` in it. Both of them are included in the mJAM-Forward credible set as well. 
 
 
 ## Example 2: Missing SNP info in some populations {.tabset}
@@ -205,26 +199,6 @@ names(RefDosage_P1) <- names(RefDosage_P2)
 
 Now we'll use the marginal summary statistics (`beta`, `se`, `EAF` and `reference dosage`) to run `mJAM-SuSiE` and `mJAM-SuSiE`. 
 
-### mJAM-SuSiE
-```{r}
-# --- Fit mJAM_SuSiE, with missing SNPs. 
-Ex2_SuSiE_fit <- mJAM_SuSiE(marginal.betas = list(MargBeta$MargBeta_P1, MargBeta$MargBeta_P2, MargBeta$MargBeta_P3), 
-                       marginal.se = list(MargBeta$MargSEBeta_P1, MargBeta$MargSEBeta_P2, MargBeta$MargSEBeta_P3), 
-                       EAFs = list(EAF$EAF_P1, EAF$EAF_P2, EAF$EAF_P3), 
-                       N_GWAS = c(5000, 5000, 5000),
-                       X_ref = list(RefDosage_P1,RefDosage_P2,RefDosage_P3),
-                       logORToBeta = FALSE,
-                       p_cases = c(0.5, 0.5, 0.5), 
-                       replace_missing = TRUE,
-                       SNP_names = MargBeta$SNP,
-                       SuSiE_num_comp = 10, 
-                       SuSiE_coverage = 0.95)
-
-## --- mJAM_SuSiE results
-mJAM_SuSiE_get_cs(susie_fit = Ex2_SuSiE_fit$fit, SNP_names = MargBeta$SNP) 
-```
-
-In this toy example, missing values do not affect `mJAM_SuSiE`'s results. 
 
 ### mJAM-Forward
 ```{r}
@@ -246,9 +220,31 @@ Ex2_Forward_fit$cs %>% filter(CS_in == T)
 ```
 In this toy example, missing values do not affect `mJAM_Forward`'s results. 
 
+### mJAM-SuSiE
+```{r}
+# --- Fit mJAM_SuSiE, with missing SNPs. 
+Ex2_SuSiE_fit <- mJAM_SuSiE(marginal.betas = list(MargBeta$MargBeta_P1, MargBeta$MargBeta_P2, MargBeta$MargBeta_P3), 
+                       marginal.se = list(MargBeta$MargSEBeta_P1, MargBeta$MargSEBeta_P2, MargBeta$MargSEBeta_P3), 
+                       EAFs = list(EAF$EAF_P1, EAF$EAF_P2, EAF$EAF_P3), 
+                       N_GWAS = c(5000, 5000, 5000),
+                       X_ref = list(RefDosage_P1,RefDosage_P2,RefDosage_P3),
+                       p_cases = c(0.5, 0.5, 0.5), 
+                       SNP_names = MargBeta$SNP,
+                       SuSiE_num_comp = 10, 
+                       SuSiE_coverage = 0.95)
+
+## --- mJAM_SuSiE results
+mJAM_SuSiE_get_cs(susie_fit = Ex2_SuSiE_fit$fit, SNP_names = MargBeta$SNP) 
+```
+
+In this toy example, missing values do not affect `mJAM_SuSiE`'s results. 
+
+
 ## Example 3: mJAM-Forward with pre-specified index
 
-mJAM provides the flexibility to pre-specify your own index SNP by `index_snps = c("rs2", "rs11")`. This will bypass the step of index SNP selection but still construct credible sets of the specified index SNPs. Note that the order of `index_snps` matters: if we put `index_snps = c("rs2", "rs11")`, `mJAM_Forward` will first construct the credible set for `rs2` and then prune out SNPs highly correlated with `rs2`. Then it will construct the credible set for `rs11` and form credible set of `rs11` by conditioning on the effect of `rs2`. If you'd like to get unconditional credible sets for `rs2` and `rs11` separately, we recommend running `mJAM_Forward` twice where specifying one `index_snp` at a time. 
+One practical advantage of mJAM-Forward is that it provides the flexibility to pre-specify your own index SNP by using the option `index_snps` in `mJAM_Forward()`. This will bypass the step of index SNP selection but still construct credible sets of the specified index SNPs. In the next example, we will specify two imaginary index SNPs: `rs2` and `rs11` by adding `index_snps = c("rs2", "rs11")` to `mJAM_Forward()`.  
+
+Note that the order of `index_snps` matters: if we put `index_snps = c("rs2", "rs11")`, `mJAM_Forward` will first construct the credible set for `rs2` and then prune out SNPs highly correlated with `rs2`. Then it will construct the credible set for `rs11` and form credible set of `rs11` by conditioning on the effect of `rs2`. If you'd like to get unconditional credible sets for `rs2` and `rs11` separately, we recommend running `mJAM_Forward` twice where specifying one `index_snp` at a time. 
 
 ```{r}
 Ex3_Forward_fit <- mJAM_Forward(N_GWAS = c(5000, 5000, 5000),
@@ -265,9 +261,9 @@ Ex3_Forward_fit <- mJAM_Forward(N_GWAS = c(5000, 5000, 5000),
 Ex3_Forward_fit$index
 
 ## --- mJAM Forward results: credible set SNPs
-Ex3_Forward_fit$cs %>% filter(CS_in == T)
+Ex3_Forward_fit$cs %>% filter(CS_in == T) 
 ```
-
+In the above example, mJAM credible set for `rs2` consists of all 10 SNPs in the same LD block as `rs2`. Conditional on `rs2`, the credible set for `rs11` consists of 5 SNPs (all within the same LD block as `rs11`). 
 
 ## session info
 ```{r}

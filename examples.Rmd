@@ -36,7 +36,8 @@ For macOS users with apple silicon (M1 Macs), please install R version 4.2-arm64
 # source("./Scripts/mJAM_build_CS_v2_med_yty_test.R")
 # source("./Scripts/mJAM_logcondp_v3.R")
 # source("./Scripts/mJAM_LDpruning.R")
-# source("./Scripts/mJAM_Forward.R")
+# source("./Scripts/mJAM_Forward2.R")
+
 library(hJAM)
 library(dplyr) ## for the use of piping operator %>% 
 ```
@@ -244,6 +245,28 @@ Ex2_Forward_fit$cs %>% filter(CS_in == T)
 
 ```
 In this toy example, missing values do not affect `mJAM_Forward`'s results. 
+
+## Example 3: mJAM-Forward with pre-specified index
+
+mJAM provides the flexibility to pre-specify your own index SNP by `index_snps = c("rs2", "rs11")`. This will bypass the step of index SNP selection but still construct credible sets of the specified index SNPs. Note that the order of `index_snps` matters: if we put `index_snps = c("rs2", "rs11")`, `mJAM_Forward` will first construct the credible set for `rs2` and then prune out SNPs highly correlated with `rs2`. Then it will construct the credible set for `rs11` and form credible set of `rs11` by conditioning on the effect of `rs2`. If you'd like to get unconditional credible sets for `rs2` and `rs11` separately, we recommend running `mJAM_Forward` twice where specifying one `index_snp` at a time. 
+
+```{r}
+Ex3_Forward_fit <- mJAM_Forward(N_GWAS = c(5000, 5000, 5000),
+                                X_ref = list(RefDosage_P1,RefDosage_P2,RefDosage_P3),
+                                Marg_Result = MargBeta,
+                                EAF_Result = EAF,
+                                condp_cut = 0.05/50, 
+                                index_snps = c("rs2", "rs11"), 
+                                within_pop_threshold = 0.50,
+                                across_pop_threshold = 0.20)
+
+
+## --- mJAM Forward results: index SNPs  
+Ex3_Forward_fit$index
+
+## --- mJAM Forward results: credible set SNPs
+Ex3_Forward_fit$cs %>% filter(CS_in == T)
+```
 
 
 ## session info

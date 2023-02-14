@@ -349,6 +349,11 @@ div.tocify {
 
 <div id="installation" class="section level2">
 <h2>Installation</h2>
+<p>Please install the package <code>hJAM</code> (Hierarchical Joint
+Analysis of Marginal Summary Statistics) from github as
+<code>mJAM</code> is developed as part of the <code>hJAM</code> package.
+We’re in the process of integrating functions from <code>hJAM</code> and
+those from <code>mJAM</code>.</p>
 <pre class="r"><code>devtools::install_github(&quot;USCbiostats/hJAM&quot;)</code></pre>
 </div>
 <div id="special-notes-for-macos-users" class="section level2">
@@ -365,7 +370,8 @@ issue.</p>
 # source(&quot;./Scripts/mJAM_build_CS_v2_med_yty_test.R&quot;)
 # source(&quot;./Scripts/mJAM_logcondp_v3.R&quot;)
 # source(&quot;./Scripts/mJAM_LDpruning.R&quot;)
-# source(&quot;./Scripts/mJAM_Forward.R&quot;)
+# source(&quot;./Scripts/mJAM_Forward2.R&quot;)
+
 library(hJAM)
 library(dplyr) ## for the use of piping operator %&gt;% </code></pre>
 <pre><code>## 
@@ -501,10 +507,10 @@ Ex1_Forward_fit &lt;- mJAM_Forward(N_GWAS = c(5000, 5000, 5000),
 <code>index</code>, <code>cs</code> and <code>marginal_est</code>.</p>
 <pre class="r"><code># Here&#39;re the selected index SNP(s)
 Ex1_Forward_fit$index</code></pre>
-<pre><code>## # A tibble: 1 × 4
-##   SNP   cond_log10p final_log10p  pcut
-##   &lt;chr&gt;       &lt;dbl&gt;        &lt;dbl&gt; &lt;dbl&gt;
-## 1 rs1         -4.86        -4.86 0.001</code></pre>
+<pre><code>## # A tibble: 1 × 6
+##   SNP   b_joint b_joint_var cond_log10p final_log10p  pcut
+##   &lt;chr&gt;   &lt;dbl&gt;       &lt;dbl&gt;       &lt;dbl&gt;        &lt;dbl&gt; &lt;dbl&gt;
+## 1 rs1    0.0544    0.000156       -4.86        -4.86 0.001</code></pre>
 <p><code>index</code> table lists all the index SNP(s) being selected
 (<code>SNP</code>), along with their log10(p-value) conditional on all
 SNP(s) above (<code>cond_log10p</code>), the log10(p-value) conditional
@@ -661,10 +667,10 @@ mJAM_SuSiE_get_cs(susie_fit = Ex2_SuSiE_fit$fit, SNP_names = MargBeta$SNP) </cod
 <pre><code>## Analysis ended.</code></pre>
 <pre class="r"><code>## --- mJAM Forward results: index SNPs  
 Ex2_Forward_fit$index</code></pre>
-<pre><code>## # A tibble: 1 × 4
-##   SNP   cond_log10p final_log10p  pcut
-##   &lt;chr&gt;       &lt;dbl&gt;        &lt;dbl&gt; &lt;dbl&gt;
-## 1 rs1         -4.86        -4.86 0.001</code></pre>
+<pre><code>## # A tibble: 1 × 6
+##   SNP   b_joint b_joint_var cond_log10p final_log10p  pcut
+##   &lt;chr&gt;   &lt;dbl&gt;       &lt;dbl&gt;       &lt;dbl&gt;        &lt;dbl&gt; &lt;dbl&gt;
+## 1 rs1    0.0544    0.000156       -4.86        -4.86 0.001</code></pre>
 <pre class="r"><code>## --- mJAM Forward results: credible set SNPs
 Ex2_Forward_fit$cs %&gt;% filter(CS_in == T)</code></pre>
 <pre><code>## # A tibble: 3 × 12
@@ -681,12 +687,75 @@ Ex2_Forward_fit$cs %&gt;% filter(CS_in == T)</code></pre>
 <code>mJAM_Forward</code>’s results.</p>
 </div>
 </div>
+<div id="example-3-mjam-forward-with-pre-specified-index"
+class="section level2">
+<h2>Example 3: mJAM-Forward with pre-specified index</h2>
+<p>mJAM provides the flexibility to pre-specify your own index SNP by
+<code>index_snps = c("rs2", "rs11")</code>. This will bypass the step of
+index SNP selection but still construct credible sets of the specified
+index SNPs. Note that the order of <code>index_snps</code> matters: if
+we put <code>index_snps = c("rs2", "rs11")</code>,
+<code>mJAM_Forward</code> will first construct the credible set for
+<code>rs2</code> and then prune out SNPs highly correlated with
+<code>rs2</code>. Then it will construct the credible set for
+<code>rs11</code> and form credible set of <code>rs11</code> by
+conditioning on the effect of <code>rs2</code>. If you’d like to get
+unconditional credible sets for <code>rs2</code> and <code>rs11</code>
+separately, we recommend running <code>mJAM_Forward</code> twice where
+specifying one <code>index_snp</code> at a time.</p>
+<pre class="r"><code>Ex3_Forward_fit &lt;- mJAM_Forward(N_GWAS = c(5000, 5000, 5000),
+                                X_ref = list(RefDosage_P1,RefDosage_P2,RefDosage_P3),
+                                Marg_Result = MargBeta,
+                                EAF_Result = EAF,
+                                condp_cut = 0.05/50, 
+                                index_snps = c(&quot;rs2&quot;, &quot;rs11&quot;), 
+                                within_pop_threshold = 0.50,
+                                across_pop_threshold = 0.20)</code></pre>
+<pre><code>## No. 1 selected index SNP: rs2</code></pre>
+<pre><code>## 2 SNPs got pruned. 49 SNPs left.</code></pre>
+<pre><code>## Continue to next round of index SNP selection.</code></pre>
+<pre><code>## No. 2 selected index SNP: rs11</code></pre>
+<pre><code>## 3 SNPs got pruned. 49 SNPs left.</code></pre>
+<pre><code>## Continue to next round of index SNP selection.</code></pre>
+<pre><code>## Analysis ended.</code></pre>
+<pre class="r"><code>## --- mJAM Forward results: index SNPs  
+Ex3_Forward_fit$index</code></pre>
+<pre><code>## # A tibble: 2 × 6
+##   SNP   b_joint[,1] b_joint_var cond_log10p final_log10p  pcut
+##   &lt;chr&gt;       &lt;dbl&gt;       &lt;dbl&gt;       &lt;dbl&gt;        &lt;dbl&gt; &lt;dbl&gt;
+## 1 rs2        0.0210    0.000125       -1.19        -1.22 0.001
+## 2 rs11      -0.0286    0.000125       -1.63        -1.63 0.001</code></pre>
+<pre class="r"><code>## --- mJAM Forward results: credible set SNPs
+Ex3_Forward_fit$cs %&gt;% filter(CS_in == T)</code></pre>
+<pre><code>## # A tibble: 15 × 12
+##    CS_SNP Post_Model_…¹ Post_…² Post_…³ Med_Ef…⁴ Post_…⁵ Post_…⁶ SD_Po…⁷ CumSu…⁸
+##    &lt;chr&gt;  &lt;chr&gt;           &lt;dbl&gt;   &lt;dbl&gt;    &lt;dbl&gt;   &lt;dbl&gt;   &lt;dbl&gt;   &lt;dbl&gt;   &lt;dbl&gt;
+##  1 rs2    8.4760576778… 1   e+0   1      0       1       1       0.394     0.394
+##  2 rs1    1.9517221969… 2.30e+3   1     -1.46e-2 0.525   0.525   0.207     0.601
+##  3 rs5    5.8916806071… 6.95e+0   1      4.07e-3 0.177   0.177   0.0697    0.671
+##  4 rs6    9.5277282989… 1.12e+1   1      3.65e-3 0.159   0.159   0.0625    0.733
+##  5 rs7    4.5226045270… 5.34e-1   0.534  6.97e-3 0.297   0.297   0.0624    0.795
+##  6 rs3    1.9163555939… 2.26e+1   1      3.15e-3 0.137   0.137   0.0540    0.849
+##  7 rs9    9.1049791928… 1.07e+2   1      1.96e-3 0.0854  0.0854  0.0337    0.883
+##  8 rs4    1.5736262685… 1.86e-1   0.186  1.00e-2 0.417   0.417   0.0305    0.914
+##  9 rs10   1.6770328794… 1.98e+2   1      1.64e-3 0.0715  0.0715  0.0282    0.942
+## 10 rs8    4.0432075644… 4.77e+2   1      1.18e-3 0.0514  0.0514  0.0203    0.962
+## 11 rs11   2.0581829337… 1   e+0   1      0       1       1       0.913     0.913
+## 12 rs26   2.0249760531… 9.84e+0   1      3.26e-4 0.0147  0.0147  0.0134    0.927
+## 13 rs9    7.9774050423… 3.88e+0   1      2.21e-4 0.0101  0.0101  0.00925   0.936
+## 14 rs6    1.4561988982… 7.08e-1   0.708 -2.88e-4 0.0132  0.0132  0.00853   0.944
+## 15 rs35   8.1523594837… 3.96e+0   1      1.82e-4 0.00822 0.00822 0.00751   0.952
+## # … with 3 more variables: EmpiricalCut &lt;dbl&gt;, CS_in &lt;lgl&gt;, index_SNP &lt;chr&gt;,
+## #   and abbreviated variable names ¹​Post_Model_Prob, ²​Post_Model_Prob_Ratio,
+## #   ³​Post_Model_Prob_Ratio2, ⁴​Med_Effect_Size, ⁵​Post_Med_Prob, ⁶​Post_Med_Prob2,
+## #   ⁷​SD_Post_CS_Prob, ⁸​CumSum_Porb</code></pre>
+</div>
 <div id="session-info" class="section level2">
 <h2>session info</h2>
 <pre class="r"><code>sessionInfo()</code></pre>
 <pre><code>## R version 4.2.0 (2022-04-22)
 ## Platform: aarch64-apple-darwin20 (64-bit)
-## Running under: macOS Monterey 12.4
+## Running under: macOS 13.0.1
 ## 
 ## Matrix products: default
 ## BLAS:   /Library/Frameworks/R.framework/Versions/4.2-arm64/Resources/lib/libRblas.0.dylib
@@ -699,24 +768,23 @@ Ex2_Forward_fit$cs %&gt;% filter(CS_in == T)</code></pre>
 ## [1] stats     graphics  grDevices utils     datasets  methods   base     
 ## 
 ## other attached packages:
-## [1] dplyr_1.0.10 hJAM_1.0.1  
+## [1] dplyr_1.1.0 hJAM_1.0.1 
 ## 
 ## loaded via a namespace (and not attached):
-##  [1] shape_1.4.6      tidyselect_1.1.2 xfun_0.32        bslib_0.4.0     
-##  [5] purrr_0.3.4      reshape2_1.4.4   splines_4.2.0    lattice_0.20-45 
-##  [9] colorspace_2.0-3 vctrs_0.4.1      generics_0.1.3   htmltools_0.5.3 
-## [13] yaml_2.3.5       gmp_0.6-6        utf8_1.2.2       survival_3.3-1  
-## [17] rlang_1.0.5      jquerylib_0.1.4  pillar_1.8.1     glue_1.6.2      
-## [21] Rmpfr_0.8-9      DBI_1.1.3        foreach_1.5.2    lifecycle_1.0.1 
-## [25] plyr_1.8.7       stringr_1.4.1    munsell_0.5.0    gtable_0.3.1    
-## [29] codetools_0.2-18 evaluate_0.16    knitr_1.40       fastmap_1.1.0   
-## [33] fansi_1.0.3      Rcpp_1.0.9       scales_1.2.1     susieR_0.10.0   
-## [37] cachem_1.0.6     jsonlite_1.8.0   ggplot2_3.3.6    digest_0.6.29   
-## [41] stringi_1.7.8    grid_4.2.0       cli_3.3.0        tools_4.2.0     
-## [45] magrittr_2.0.3   sass_0.4.2       glmnet_4.1-4     tibble_3.1.8    
-## [49] pkgconfig_2.0.3  ellipsis_0.3.2   Matrix_1.4-1     matrixcalc_1.0-5
-## [53] assertthat_0.2.1 rmarkdown_2.14   reshape_0.8.9    rstudioapi_0.14 
-## [57] iterators_1.0.14 R6_2.5.1         compiler_4.2.0</code></pre>
+##  [1] shape_1.4.6      tidyselect_1.2.0 xfun_0.32        bslib_0.4.0     
+##  [5] reshape2_1.4.4   splines_4.2.0    lattice_0.20-45  colorspace_2.1-0
+##  [9] vctrs_0.5.2      generics_0.1.3   htmltools_0.5.3  yaml_2.3.5      
+## [13] gmp_0.7-1        utf8_1.2.3       survival_3.3-1   rlang_1.0.6     
+## [17] jquerylib_0.1.4  pillar_1.8.1     glue_1.6.2       Rmpfr_0.9-1     
+## [21] withr_2.5.0      foreach_1.5.2    lifecycle_1.0.3  plyr_1.8.8      
+## [25] stringr_1.5.0    munsell_0.5.0    gtable_0.3.1     codetools_0.2-18
+## [29] evaluate_0.16    knitr_1.40       fastmap_1.1.0    fansi_1.0.4     
+## [33] Rcpp_1.0.10      scales_1.2.1     susieR_0.10.0    cachem_1.0.6    
+## [37] jsonlite_1.8.0   ggplot2_3.4.1    digest_0.6.29    stringi_1.7.12  
+## [41] grid_4.2.0       cli_3.6.0        tools_4.2.0      magrittr_2.0.3  
+## [45] sass_0.4.2       glmnet_4.1-6     tibble_3.1.8     pkgconfig_2.0.3 
+## [49] Matrix_1.4-1     matrixcalc_1.0-6 rmarkdown_2.14   reshape_0.8.9   
+## [53] rstudioapi_0.14  iterators_1.0.14 R6_2.5.1         compiler_4.2.0</code></pre>
 </div>
 
 <br><br>
